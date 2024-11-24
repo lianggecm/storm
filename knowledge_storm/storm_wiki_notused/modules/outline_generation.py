@@ -14,11 +14,10 @@ class StormOutlineGenerationModule(OutlineGenerationModule):
     curation stage, generate outline for the article.
     """
 
-    def __init__(self, outline_gen_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel], language: str='en'):
+    def __init__(self, outline_gen_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel]):
         super().__init__()
         self.outline_gen_lm = outline_gen_lm
-        self.language=language
-        self.write_outline = WriteOutline(engine=self.outline_gen_lm, language=self.language)
+        self.write_outline = WriteOutline(engine=self.outline_gen_lm)
 
     def generate_outline(
         self,
@@ -76,12 +75,11 @@ class StormOutlineGenerationModule(OutlineGenerationModule):
 class WriteOutline(dspy.Module):
     """Generate the outline for the Wikipedia page."""
 
-    def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel], language: str='en'):
+    def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel]):
         super().__init__()
         self.draft_page_outline = dspy.Predict(WritePageOutline)
         self.write_page_outline = dspy.Predict(WritePageOutlineFromConv)
         self.engine = engine
-        self.language=language
 
     def forward(
         self,
@@ -110,7 +108,7 @@ class WriteOutline(dspy.Module):
         with dspy.settings.context(lm=self.engine):
             if old_outline is None:
                 old_outline = ArticleTextProcessing.clean_up_outline(
-                    self.draft_page_outline(topic=topic, language=self.language).outline
+                    self.draft_page_outline(topic=topic).outline
                 )
                 if callback_handler:
                     callback_handler.on_direct_outline_generation_end(
@@ -118,7 +116,7 @@ class WriteOutline(dspy.Module):
                     )
             outline = ArticleTextProcessing.clean_up_outline(
                 self.write_page_outline(
-                    topic=topic, old_outline=old_outline, conv=conv, language=self.language
+                    topic=topic, old_outline=old_outline, conv=conv
                 ).outline
             )
             if callback_handler:
@@ -128,7 +126,7 @@ class WriteOutline(dspy.Module):
 
 
 class WritePageOutline(dspy.Signature):
-    """Write an outline for a Wikipedia page.
+    """Write an outline for the topic provided by the user.
     Here is the format of your writing:
     1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.
     2. Do not include other information.
@@ -136,26 +134,26 @@ class WritePageOutline(dspy.Signature):
     """
 
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
-    language=dspy.InputField(prefix="You should always return your answer in the language user requested: ", format=str)
-    outline = dspy.OutputField(prefix="Write the Wikipedia page outline:\n", format=str)
+#    persona = dspy.InputField(prefix="The role of the outline writer", format=str)
+#    sample_outline = dspy.InputField(prefix="The important sections to be included in the outline", format=str)
+    outline = dspy.OutputField(prefix="Write the outline:\n", format=str)
 
 
 class NaiveOutlineGen(dspy.Module):
     """Generate the outline with LLM's parametric knowledge directly."""
 
-    def __init__(self, language: str='en'):
+    def __init__(self):
         super().__init__()
-        self.language=language
         self.write_outline = dspy.Predict(WritePageOutline)
 
     def forward(self, topic: str):
-        outline = self.write_outline(topic=topic, language=self.language).outline
+        outline = self.write_outline(topic=topic).outline
 
         return dspy.Prediction(outline=outline)
 
 
 class WritePageOutlineFromConv(dspy.Signature):
-    """Improve an outline for a Wikipedia page. You already have a draft outline that covers the general information. Now you want to improve it based on the information learned from an information-seeking conversation to make it more informative.
+    """Improve an outline for the given topic. You already have a draft outline that covers the general information. Now you want to improve it based on the information learned from an information-seeking conversation to make it more informative.
     Here is the format of your writing:
     1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.
     2. Do not include other information.
@@ -165,7 +163,6 @@ class WritePageOutlineFromConv(dspy.Signature):
     topic = dspy.InputField(prefix="The topic you want to write: ", format=str)
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
     old_outline = dspy.OutputField(prefix="Current outline:\n", format=str)
-    language=dspy.InputField(prefix="You should always return your outline in the language user requested: ", format=str)
     outline = dspy.OutputField(
         prefix='Write the Wikipedia page outline (Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, ...):\n',
         format=str,

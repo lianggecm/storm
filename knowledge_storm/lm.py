@@ -817,7 +817,7 @@ class TogetherClient(dspy.HFModel):
             return response
 
 
-class GoogleModel(dspy.dsp.modules.lm.LM):
+class GoogleModel(dspy.Google):#dspy.dsp.modules.lm.LM):
     """A wrapper class for Google Gemini API."""
 
     def __init__(

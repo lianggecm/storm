@@ -33,17 +33,14 @@ class ConvSimulator(dspy.Module):
         max_search_queries_per_turn: int,
         search_top_k: int,
         max_turn: int,
-        language: str = "en",
     ):
         super().__init__()
-        self.language=language
-        self.wiki_writer = WikiWriter(engine=question_asker_engine, language=self.language)
+        self.wiki_writer = WikiWriter(engine=question_asker_engine)
         self.topic_expert = TopicExpert(
             engine=topic_expert_engine,
             max_search_queries=max_search_queries_per_turn,
             search_top_k=search_top_k,
             retriever=retriever,
-            language=language,
         )
         self.max_turn = max_turn
 
@@ -89,12 +86,11 @@ class WikiWriter(dspy.Module):
 
     The asked question will be used to start a next round of information seeking."""
 
-    def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel], language: str = "en"):
+    def __init__(self, engine: Union[dspy.dsp.LM, dspy.dsp.HFModel]):
         super().__init__()
         self.ask_question_with_persona = dspy.ChainOfThought(AskQuestionWithPersona)
         self.ask_question = dspy.ChainOfThought(AskQuestion)
         self.engine = engine
-        self.language=language
 
     def forward(
         self,
@@ -119,7 +115,7 @@ class WikiWriter(dspy.Module):
         with dspy.settings.context(lm=self.engine):
             if persona is not None and len(persona.strip()) > 0:
                 question = self.ask_question_with_persona(
-                    topic=topic, persona=persona, conv=conv, language=self.language
+                    topic=topic, persona=persona, conv=conv
                 ).question
             else:
                 question = self.ask_question(
@@ -152,7 +148,6 @@ class AskQuestionWithPersona(dspy.Signature):
         prefix="Your persona besides being a Wikipedia writer: ", format=str
     )
     conv = dspy.InputField(prefix="Conversation history:\n", format=str)
-    language = dspy.InputField(prefix = "You should always output your questions in the following language as requested by the user: ", format=str)
     question = dspy.OutputField(format=str)
 
 
@@ -162,12 +157,10 @@ class QuestionToQuery(dspy.Signature):
     - query 1
     - query 2
     ...
-    - query n
-    """
+    - query n"""
 
     topic = dspy.InputField(prefix="Topic you are discussing about: ", format=str)
     question = dspy.InputField(prefix="Question you want to answer: ", format=str)
-    language = dspy.InputField(prefix = "You should always output your queries in the following language as requested by the user: ", format=str)
     queries = dspy.OutputField(format=str)
 
 
@@ -179,7 +172,6 @@ class AnswerQuestion(dspy.Signature):
     topic = dspy.InputField(prefix="Topic you are discussing about:", format=str)
     conv = dspy.InputField(prefix="Question:\n", format=str)
     info = dspy.InputField(prefix="Gathered information:\n", format=str)
-    language = dspy.InputField(prefix = "You should always output your answers in the following language as requested by the user: ", format=str)
     answer = dspy.OutputField(
         prefix="Now give your response. (Try to use as many different sources as possible and add do not hallucinate.)\n",
         format=str,
@@ -200,7 +192,6 @@ class TopicExpert(dspy.Module):
         max_search_queries: int,
         search_top_k: int,
         retriever: Retriever,
-        language: str = "en",
     ):
         super().__init__()
         self.generate_queries = dspy.Predict(QuestionToQuery)
@@ -209,12 +200,11 @@ class TopicExpert(dspy.Module):
         self.engine = engine
         self.max_search_queries = max_search_queries
         self.search_top_k = search_top_k
-        self.language = language
 
     def forward(self, topic: str, question: str, ground_truth_url: str):
         with dspy.settings.context(lm=self.engine, show_guidelines=False):
             # Identify: Break down question into queries.
-            queries = self.generate_queries(topic=topic, question=question, language=self.language).queries
+            queries = self.generate_queries(topic=topic, question=question).queries
             queries = [
                 q.replace("-", "").strip().strip('"').strip('"').strip()
                 for q in queries.split("\n")
@@ -232,12 +222,12 @@ class TopicExpert(dspy.Module):
                     info += "\n\n"
 
                 info = ArticleTextProcessing.limit_word_count_preserve_newline(
-                    info, 4000
+                    info, 1000
                 )
 
                 try:
                     answer = self.answer_question(
-                        topic=topic, conv=question, info=info, language=self.language,
+                        topic=topic, conv=question, info=info
                     ).answer
                     answer = ArticleTextProcessing.remove_uncompleted_sentences_with_citations(
                         answer
@@ -269,7 +259,6 @@ class StormKnowledgeCurationModule(KnowledgeCurationModule):
         search_top_k: int,
         max_conv_turn: int,
         max_thread_num: int,
-        language: str = "en",
     ):
         """
         Store args and finish initialization.
@@ -287,9 +276,7 @@ class StormKnowledgeCurationModule(KnowledgeCurationModule):
             max_search_queries_per_turn=max_search_queries_per_turn,
             search_top_k=search_top_k,
             max_turn=max_conv_turn,
-            language=language,
         )
-        self.language=language
 
     def _get_considered_personas(self, topic: str, max_num_persona) -> List[str]:
         return self.persona_generator.generate_persona(

@@ -11,8 +11,8 @@ import streamlit as st
 
 # If you install the source code instead of the `knowledge-storm` package,
 # Uncomment the following lines:
-# import sys
-# sys.path.append('../../')
+import sys
+sys.path.append('../../')
 from knowledge_storm import STORMWikiRunnerArguments, STORMWikiRunner, STORMWikiLMConfigs
 from knowledge_storm.lm import OpenAIModel
 from knowledge_storm.rm import YouRM

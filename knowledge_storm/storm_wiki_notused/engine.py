@@ -167,7 +167,6 @@ class STORMWikiRunnerArguments:
             "Consider reducing it if keep getting 'Exceed rate limit' error when calling LM API."
         },
     )
-    language: str = field(default='en', metadata={"help": "Language code for the pipeline."})
 
 
 class STORMWikiRunner(Engine):
@@ -193,22 +192,18 @@ class STORMWikiRunner(Engine):
             search_top_k=self.args.search_top_k,
             max_conv_turn=self.args.max_conv_turn,
             max_thread_num=self.args.max_thread_num,
-            language = self.args.language,
         )
         self.storm_outline_generation_module = StormOutlineGenerationModule(
-            outline_gen_lm=self.lm_configs.outline_gen_lm,
-            language = self.args.language,
+            outline_gen_lm=self.lm_configs.outline_gen_lm
         )
         self.storm_article_generation = StormArticleGenerationModule(
             article_gen_lm=self.lm_configs.article_gen_lm,
             retrieve_top_k=self.args.retrieve_top_k,
             max_thread_num=self.args.max_thread_num,
-            language = self.args.language,
         )
         self.storm_article_polishing_module = StormArticlePolishingModule(
             article_gen_lm=self.lm_configs.article_gen_lm,
             article_polish_lm=self.lm_configs.article_polish_lm,
-            language = self.args.language,
         )
 
         self.lm_configs.init_check()

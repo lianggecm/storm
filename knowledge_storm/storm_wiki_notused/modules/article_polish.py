@@ -18,7 +18,6 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         self,
         article_gen_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel],
         article_polish_lm: Union[dspy.dsp.LM, dspy.dsp.HFModel],
-        language: str = "en",
     ):
         self.article_gen_lm = article_gen_lm
         self.article_polish_lm = article_polish_lm
@@ -26,7 +25,6 @@ class StormArticlePolishingModule(ArticlePolishingModule):
         self.polish_page = PolishPageModule(
             write_lead_engine=self.article_gen_lm, polish_engine=self.article_polish_lm
         )
-        self.language = language
 
     def polish_article(
         self, topic: str, draft_article: StormArticle, remove_duplicate: bool = False
@@ -61,8 +59,8 @@ class WriteLeadSection(dspy.Signature):
     2. The lead section should be concise and contain no more than four well-composed paragraphs.
     3. The lead section should be carefully sourced as appropriate. Add inline citations (e.g., "Washington, D.C., is the capital of the United States.[1][3].") where necessary.
     
+    Please make sure to return in Chinese.
     """
-#    Make sure to use Chinese for your writing.
 
     topic = dspy.InputField(prefix="The topic of the page: ", format=str)
     draft_page = dspy.InputField(prefix="The draft page:\n", format=str)
@@ -70,8 +68,8 @@ class WriteLeadSection(dspy.Signature):
 
 
 class PolishPage(dspy.Signature):
-    """You are a faithful text editor that is good at finding repeated information in the article and deleting them to make sure there is no repetition in the article. You won't delete any non-repeated part in the article. You will keep the inline citations and article structure (indicated by "#", "##", etc.) appropriately. Do your job for the following article."""
-#    Please make sure to use Chinese for your writing."""
+    """You are a faithful text editor that is good at finding repeated information in the article and deleting them to make sure there is no repetition in the article. You won't delete any non-repeated part in the article. You will keep the inline citations and article structure (indicated by "#", "##", etc.) appropriately. Do your job for the following article.
+    Please make sure to return in Chinese."""
 
     draft_page = dspy.InputField(prefix="The draft article:\n", format=str)
     page = dspy.OutputField(prefix="Your revised article:\n", format=str)
