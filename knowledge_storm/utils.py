@@ -408,12 +408,11 @@ class ArticleTextProcessing:
         #     combined_sentences += ' '.join(trailing_citations)
 
         # Regex pattern to match sentence endings, including optional citation markers.
-        eos_pattern = r"([.!?])\s*(\[\d+\])?\s*"
+        eos_pattern = r'(?<![\d]|^\d)([.!?])(?![0-9])\s*(\[\d+\])?\s*'
         matches = list(re.finditer(eos_pattern, text))
         if matches:
             last_match = matches[-1]
             text = text[: last_match.end()].strip()
-
         return text
 
     @staticmethod

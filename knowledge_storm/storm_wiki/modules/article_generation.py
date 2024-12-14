@@ -42,7 +42,7 @@ class StormArticleGenerationModule(ArticleGenerationModule):
             )
         output = self.section_gen(
             topic=topic,
-            outline=section_outline,
+            section_outline=section_outline,
             section=section_name,
             collected_info=collected_info,
         )
@@ -104,6 +104,9 @@ class StormArticleGenerationModule(ArticleGenerationModule):
                         "conclusion"
                     ) or section_title.lower().strip().startswith("summary"):
                         continue
+                    
+                    if section_title.lower().strip().startswith("references") or section_title.lower().strip().startswith("参考文献"):
+                        continue
                     section_query = article_with_outline.get_outline_as_list(
                         root_section_name=section_title, add_hashtags=False
                     )
@@ -146,7 +149,7 @@ class ConvToSection(dspy.Module):
         self.engine = engine
 
     def forward(
-        self, topic: str, outline: str, section: str, collected_info: List[Information]
+        self, topic: str, section_outline: str, section: str, collected_info: List[Information]
     ):
         info = ""
         for idx, storm_info in enumerate(collected_info):
@@ -157,7 +160,7 @@ class ConvToSection(dspy.Module):
 
         with dspy.settings.context(lm=self.engine):
             section = ArticleTextProcessing.clean_up_section(
-                self.write_section(topic=topic, info=info, section=section, language=self.language).output
+                self.write_section(topic=topic, info=info, section=section, section_outline=section_outline, language=self.language).output
             )
 
         return dspy.Prediction(section=section)
@@ -165,7 +168,7 @@ class ConvToSection(dspy.Module):
 
 class WriteSection(dspy.Signature):
     """Write a section based on the collected information.
-    Make sure you follow the section outline as closely as possible. When writing an section about implement a system or something similar, you should include as much detail as possible. For example, when writing implementaion of a database system, you should spell out what type of data needs to be collected, how to implement the actual data pipeline, how to make sure the data quality is good, etc.
+    Make sure you follow the subsection outline as closely as possible. When writing an section about implement a system or something similar, you should include as much detail as possible. For example, when writing implementaion of a database system, you should spell out what type of data needs to be collected, how to implement the actual data pipeline, how to make sure the data quality is good, etc.
     Here is the format of your writing:
         1. Use "#" Title" to indicate section title, "##" Title" to indicate subsection title, "###" Title" to indicate subsubsection title, and so on.
         2. Use [1], [2], ..., [n] in line (for example, "The capital of the United States is Washington, D.C.[1][3]."). You DO NOT need to include a References or Sources section to list the sources at the end.
@@ -175,6 +178,7 @@ class WriteSection(dspy.Signature):
     info = dspy.InputField(prefix="The collected information:\n", format=str)
     topic = dspy.InputField(prefix="The topic of the page: ", format=str)
     section = dspy.InputField(prefix="The section you need to write: ", format=str)
+    section_outline = dspy.InputField(prefix="The subsections for the section you need to write: ", format=str)
     language = dspy.InputField(prefix="The language of the writing: ", format=str)
     output = dspy.OutputField(
         prefix="Write the section with proper inline citations (Start your writing with # section title. Don't include the page title or try to write other sections):\n",
