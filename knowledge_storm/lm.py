@@ -9,7 +9,7 @@ import dspy
 import requests
 from dsp import ERRORS, backoff_hdlr, giveup_hdlr
 from dsp.modules.hf import openai_to_hf
-from dsp.modules.hf_client import send_hftgi_request_v01_wrapped
+from dsp.modules.hf_client fimport send_hftgi_request_v01_wrapped
 from openai import OpenAI
 from transformers import AutoTokenizer
 
